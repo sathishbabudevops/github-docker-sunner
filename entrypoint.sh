@@ -23,13 +23,33 @@ echo "============================================"
 
 # ── Get registration token from GitHub API ──
 echo "Requesting registration token..."
-REG_TOKEN=$(curl -s -X POST \
+
+# Capture full response first (not piped directly to jq)
+API_RESPONSE=$(curl -sL -w "\nHTTP_STATUS:%{http_code}" -X POST \
   -H "Authorization: token ${GITHUB_TOKEN}" \
   -H "Accept: application/vnd.github.v3+json" \
-  "https://api.github.com/repos/${GITHUB_REPO}/actions/runners/registration-token" | jq -r '.token')
+  "https://api.github.com/repos/${GITHUB_REPO}/actions/runners/registration-token")
 
-if [ "$REG_TOKEN" == "null" ] || [ -z "$REG_TOKEN" ]; then
-  echo "ERROR: Failed to get registration token. Check your GITHUB_TOKEN and GITHUB_REPO."
+# Extract HTTP status code
+HTTP_STATUS=$(echo "$API_RESPONSE" | tail -1 | sed 's/HTTP_STATUS://')
+# Extract response body (everything except last line)
+RESPONSE_BODY=$(echo "$API_RESPONSE" | sed '$d')
+
+# Debug: show what we got
+echo "  HTTP Status: ${HTTP_STATUS}"
+
+if [ "$HTTP_STATUS" != "201" ]; then
+  echo "ERROR: GitHub API returned HTTP ${HTTP_STATUS}"
+  echo "Response: ${RESPONSE_BODY}"
+  exit 1
+fi
+
+# Extract token from JSON response
+REG_TOKEN=$(echo "$RESPONSE_BODY" | jq -r '.token // empty')
+
+if [ -z "$REG_TOKEN" ]; then
+  echo "ERROR: Could not extract token from response"
+  echo "Response: ${RESPONSE_BODY}"
   exit 1
 fi
 
@@ -39,11 +59,13 @@ echo "Registration token acquired."
 cleanup() {
   echo ""
   echo "Removing runner..."
-  REMOVE_TOKEN=$(curl -s -X POST \
+  REMOVE_TOKEN=$(curl -sL -X POST \
     -H "Authorization: token ${GITHUB_TOKEN}" \
     -H "Accept: application/vnd.github.v3+json" \
-    "https://api.github.com/repos/${GITHUB_REPO}/actions/runners/remove-token" | jq -r '.token')
-  ./config.sh remove --token "$REMOVE_TOKEN" 2>/dev/null || true
+    "https://api.github.com/repos/${GITHUB_REPO}/actions/runners/remove-token" | jq -r '.token // empty')
+  if [ -n "$REMOVE_TOKEN" ]; then
+    ./config.sh remove --token "$REMOVE_TOKEN" 2>/dev/null || true
+  fi
   echo "Runner removed. Container will exit."
 }
 
