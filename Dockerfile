@@ -1,6 +1,6 @@
 FROM ubuntu:22.04
 
-ARG RUNNER_VERSION=2.321.0
+ARG RUNNER_VERSION=2.333.0
 ARG DEBIAN_FRONTEND=noninteractive
 
 # ── Core dependencies ──
@@ -32,6 +32,10 @@ RUN curl -o actions-runner.tar.gz -L \
     rm actions-runner.tar.gz && \
     ./bin/installdependencies.sh && \
     chown -R runner:runner /home/runner
+
+# ── Disable auto-update (version controlled via image rebuild) ──
+ENV AGENT_TOOLSDIRECTORY=/opt/hostedtoolcache
+RUN mkdir -p /opt/hostedtoolcache && chown runner:runner /opt/hostedtoolcache
 
 # ── Entrypoint script ──
 COPY entrypoint.sh /entrypoint.sh
