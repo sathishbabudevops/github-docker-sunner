@@ -1,0 +1,25 @@
+services:
+  # ── Single runner for quick testing ──
+  runner:
+    build: .
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - RUNNER_NAME=docker-runner-1
+      - RUNNER_LABELS=self-hosted,linux,docker,dynamic
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker-in-Docker (optional)
+    restart: "no"  # Ephemeral: don't restart after job completes
+
+  # ── Scale up: 3 runners for parallel jobs ──
+  # Uncomment below and use: docker compose up -d --scale runner-pool=3
+  #
+  # runner-pool:
+  #   build: .
+  #   environment:
+  #     - GITHUB_TOKEN=${GITHUB_TOKEN}
+  #     - GITHUB_REPO=${GITHUB_REPO}
+  #     - RUNNER_LABELS=self-hosted,linux,docker,dynamic
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   restart: "no"
