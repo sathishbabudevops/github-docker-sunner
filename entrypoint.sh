@@ -57,7 +57,8 @@ trap cleanup EXIT SIGTERM SIGINT
   --labels "$RUNNER_LABELS" \
   --ephemeral \
   --unattended \
-  --replace
+  --replace \
+  --disableupdate
 
 # ── Start runner (ephemeral = exits after one job) ──
 echo ""
